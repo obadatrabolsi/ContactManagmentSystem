@@ -3,6 +3,7 @@ using CMS.Api.Middlewares;
 using CMS.Core.Base;
 using CMS.Core.Cache;
 using CMS.Core.Mappers;
+using CMS.Core.Models;
 using CMS.Core.Settings;
 using CMS.Data.Helpers;
 using CMS.Data.Repository;
@@ -12,10 +13,18 @@ using CMS.Services.ExtendedFields;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Mvc;
+using Quivyo.Core.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+     .ConfigureApiBehaviorOptions(options =>
+     {
+         options.SuppressModelStateInvalidFilter = false;
+         options.InvalidModelStateResponseFactory =
+         context => new BadRequestObjectResult(ApiResponse.Error(context.ModelState.GetErrorsDictionary()));
+     });
 
 builder.Services.AddSwaggerGen();
 
@@ -27,6 +36,7 @@ builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IContactService, ContactService>();
 builder.Services.AddSingleton<DbHelper>();
 
+// Caching
 builder.Services.AddInMemoryCache(new CacheSettings()
 {
     DefaultCacheTime = 1440, // Time in minutes. (1 day)

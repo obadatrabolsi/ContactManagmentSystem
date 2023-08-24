@@ -53,7 +53,6 @@ namespace CMS.Services.Companies
         {
             return await _repository.ListAsync(x => ids.Contains(x.Id));
         }
-
         public async Task<Company> GetCachedAsync(Guid id)
         {
             var key = string.Format(CacheKeys.COMPANY_BY_ID, id);
@@ -75,6 +74,11 @@ namespace CMS.Services.Companies
         }
         public async Task UpdateAsync(UpdateCompanyRequest model)
         {
+            var isExists = await _repository.AnyAsync(x => x.Id == model.Id);
+
+            if (!isExists)
+                throw new Exception($"The requested company is not found");
+
             var entityToUpdate = model.MapTo<Company>();
 
             await _extendedFieldService.ValidateForEntity<Company>(model.ExtendedFields);
@@ -85,6 +89,11 @@ namespace CMS.Services.Companies
         }
         public async Task DeleteAsync(Guid id)
         {
+            var isExists = await _repository.AnyAsync(x => x.Id == id);
+
+            if (!isExists)
+                throw new Exception($"The requested company is not found");
+
             await _repository.DeleteAsync(id);
 
             ClearCache(id);

@@ -3,6 +3,7 @@ using CMS.Core.Validations;
 using CMS.Domain.Entities.ExtendedFields;
 using CMS.Domain.Enums;
 using FluentValidation;
+using Quivyo.Core.Constants;
 
 namespace CMS.Domain.Requests.Fields
 {
@@ -17,9 +18,9 @@ namespace CMS.Domain.Requests.Fields
     {
         public CreateFieldRequestValidator()
         {
-            RuleFor(x => x.FieldName).Required();
-            RuleFor(x => x.FieldType).Required();
-            RuleFor(x => x.EntityName).Required();
+            RuleFor(x => x.FieldName).Required().Matches(RegExpHelper.FieldName);
+            RuleFor(x => x.FieldType).Required().IsInEnum();
+            RuleFor(x => x.EntityName).Required().IsInEnum();
         }
     }
 

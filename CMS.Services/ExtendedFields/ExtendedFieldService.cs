@@ -9,6 +9,8 @@ using CMS.Domain.Requests.Fields;
 using CMS.Domain.Responses.Fields;
 using CMS.Services.Base;
 using Microsoft.AspNetCore.Http;
+using Quivyo.Core.Constants;
+using System.Text.RegularExpressions;
 
 namespace CMS.Services.ExtendedFields
 {
@@ -58,6 +60,25 @@ namespace CMS.Services.ExtendedFields
             if (fieldToValidate.IsEmpty())
                 return;
 
+            await ValidateFieldExists<TEntity>(fieldToValidate);
+
+            await ValidateFieldValueAsync<TEntity>(fieldToValidate);
+        }
+
+        #endregion
+
+        #region Utilities
+
+        private async Task ValidateFieldAsync(CreateFieldRequest model)
+        {
+            var isExists = await _repository.AnyAsync(x => x.FieldName.ToLower() == model.FieldName.Trim().ToLower() &&
+                                                           x.EntityName == model.EntityName);
+
+            if (isExists)
+                throw new BadHttpRequestException("The entered field is already exists");
+        }
+        private async Task ValidateFieldExists<TEntity>(Dictionary<string, object> fieldToValidate)
+        {
             var entityFields = await GetAllEntityFieldsNames<TEntity>();
 
             var unExistsFields = fieldToValidate.Where(ex => !entityFields.Contains(ex.Key));
@@ -68,18 +89,28 @@ namespace CMS.Services.ExtendedFields
                 throw new BadHttpRequestException(string.Format("The following fields in not valid to the given entity: {0}", invalidFields));
             }
         }
-
-        #endregion
-
-        #region Utilities
-
-        private async Task ValidateFieldAsync(CreateFieldRequest model)
+        private async Task ValidateFieldValueAsync<TEntity>(Dictionary<string, object> fieldToValidate)
         {
-            var isExists = await _repository.AnyAsync(x => x.FieldName.ToLower() == model.FieldName &&
-                                                           x.EntityName == model.EntityName);
+            var entityExtraFields = await GetForEntityCachedAsync<TEntity>();
 
-            if (isExists)
-                throw new BadHttpRequestException("The entered field is already exists");
+            foreach (var field in fieldToValidate)
+            {
+                var extraFieldEntity = entityExtraFields.FirstOrDefault(x => x.FieldName == field.Key);
+
+                switch (extraFieldEntity.FieldType)
+                {
+                    case FieldType.Number:
+                        if (!Regex.IsMatch(field.Value?.ToString(), RegExpHelper.DecimalNumber))
+                            throw new BadHttpRequestException($"The value of the field {field.Key} must contains only numbers");
+
+                        break;
+                    case FieldType.Date:
+                        if (!Regex.IsMatch(field.Value?.ToString(), RegExpHelper.Date))
+                            throw new BadHttpRequestException($"The value of the field {field.Key} must contains only date dd/MM/yyyy ");
+
+                        break;
+                }
+            }
         }
         private async Task<List<string>> GetAllEntityFieldsNames<TEntity>()
         {
