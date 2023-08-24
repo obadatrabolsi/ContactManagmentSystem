@@ -27,7 +27,6 @@ builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IContactService, ContactService>();
 builder.Services.AddSingleton<DbHelper>();
 
-builder.Services.AddMemoryCache();
 builder.Services.AddInMemoryCache(new CacheSettings()
 {
     DefaultCacheTime = 1440, // Time in minutes. (1 day)

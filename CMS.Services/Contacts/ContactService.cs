@@ -13,6 +13,8 @@ namespace CMS.Services.Contacts
 {
     public class ContactService : MongoBaseService<Contact>, IContactService
     {
+        #region Props & Ctor
+
         private readonly IExtendedFieldService _extendedFieldService;
         private readonly ICompanyService _companyService;
 
@@ -24,6 +26,9 @@ namespace CMS.Services.Contacts
             _companyService=companyService;
         }
 
+        #endregion
+
+        #region Methods
         public async Task<PagedResponse<ContactResponse>> ListPaginatedAsync(PagedRequest options)
         {
             var result = await _repository.ListPaginatedAsync(x => x.MapTo<ContactResponse>(), options);
@@ -55,7 +60,6 @@ namespace CMS.Services.Contacts
 
             await _repository.InsertAsync(entityToInsert);
         }
-
         public async Task UpdateAsync(UpdateContactRequest model)
         {
             var isExists = await _repository.AnyAsync(x => x.Id == model.Id);
@@ -81,7 +85,9 @@ namespace CMS.Services.Contacts
             await _repository.DeleteAsync(id);
         }
 
+        #endregion
 
+        #region Utilities
 
         private async Task MapCompaniesAsync(CreateContactRequest model, Contact entityToInsert)
         {
@@ -95,5 +101,6 @@ namespace CMS.Services.Contacts
                 entityToInsert.Companies.Add(company);
             }
         }
+        #endregion
     }
 }

@@ -14,6 +14,7 @@ namespace CMS.Services.Companies
 {
     public class CompanyService : MongoBaseService<Company>, ICompanyService
     {
+        #region Props & Ctor
         private readonly IExtendedFieldService _extendedFieldService;
         private readonly ICacheManager _cacheManager;
 
@@ -25,13 +26,15 @@ namespace CMS.Services.Companies
             _cacheManager=cacheManager;
         }
 
+        #endregion
+
+        #region Methods
         public async Task<PagedResponse<CompanyResponse>> ListPaginatedAsync(PagedRequest options)
         {
             var result = await _repository.ListPaginatedAsync(x => x.MapTo<CompanyResponse>(), options);
 
             return result;
         }
-
         public async Task<List<CompanyResponse>> GetAsync()
         {
             var companies = await _repository.ListAllAsync();
@@ -77,10 +80,26 @@ namespace CMS.Services.Companies
             await _extendedFieldService.ValidateForEntity<Company>(model.ExtendedFields);
 
             await _repository.UpdateAsync(entityToUpdate);
+
+            ClearCache(model.Id);
         }
         public async Task DeleteAsync(Guid id)
         {
             await _repository.DeleteAsync(id);
+
+            ClearCache(id);
         }
+
+        #endregion
+
+        #region Utilities
+
+        private void ClearCache(Guid id)
+        {
+            var key = string.Format(CacheKeys.COMPANY_BY_ID, id);
+
+            _cacheManager.Remove(key);
+        }
+        #endregion
     }
 }

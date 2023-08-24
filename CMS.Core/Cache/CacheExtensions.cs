@@ -13,6 +13,8 @@ namespace CMS.Core.Cache
 
             services.AddScoped<ICacheManager, MemoryCacheService>();
 
+            services.AddMemoryCache();
+
             return services;
         }
     }

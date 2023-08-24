@@ -1,4 +1,6 @@
 ﻿using CMS.Core.Base;
+using CMS.Core.Cache;
+using CMS.Core.Constants;
 using CMS.Core.Extensions;
 using CMS.Core.Mappers;
 using CMS.Domain.Entities.ExtendedFields;
@@ -12,9 +14,18 @@ namespace CMS.Services.ExtendedFields
 {
     public class ExtendedFieldService : MongoBaseService<ExtendedField>, IExtendedFieldService
     {
-        public ExtendedFieldService(IMongoRepository<ExtendedField> repository) : base(repository)
+        #region Props & Ctor
+
+        private readonly ICacheManager _cacheManager;
+        public ExtendedFieldService(IMongoRepository<ExtendedField> repository,
+            ICacheManager cacheManager) : base(repository)
         {
+            _cacheManager=cacheManager;
         }
+
+        #endregion
+
+        #region Methods
 
         public async Task<List<FieldResponse>> GetForEntityAsync<TEntity>()
         {
@@ -27,27 +38,9 @@ namespace CMS.Services.ExtendedFields
         }
         public async Task<List<FieldResponse>> GetForEntityCachedAsync<TEntity>()
         {
-            // Show enable caching
-            var entityName = typeof(TEntity).Name;
-            var entityNameEnum = Enum.Parse<EntityName>(entityName);
+            var key = string.Format(CacheKeys.FIELDS_BY_ENTITY, typeof(TEntity).Name);
 
-            var entityFields = await _repository.ListAsync(x => x.EntityName == entityNameEnum);
-
-            return entityFields.Select(x => x.MapTo<FieldResponse>()).ToList();
-        }
-        public async Task<List<string>> GetAllEntityFieldsNames<TEntity>()
-        {
-            var typeFields = typeof(TEntity).GetPropertiesList();
-            var entityExtraFields = (await GetForEntityCachedAsync<TEntity>()).Select(x => x.FieldName).ToList();
-
-            return typeFields.Concat(entityExtraFields).ToList();
-        }
-        public async Task<List<(string FieldName, bool IsExtendedField)>> GetAllEntityFields<TEntity>()
-        {
-            var typeFields = typeof(TEntity).GetPropertiesList().Select(x => (x, false));
-            var entityExtraFields = (await GetForEntityCachedAsync<TEntity>()).Select(x => (x.FieldName, true)).ToList();
-
-            return typeFields.Concat(entityExtraFields).ToList();
+            return await _cacheManager.Get(key, GetForEntityAsync<TEntity>);
         }
 
         public async Task CreateAsync(CreateFieldRequest model)
@@ -57,6 +50,8 @@ namespace CMS.Services.ExtendedFields
             await ValidateFieldAsync(model);
 
             await _repository.InsertAsync(entityToInsert);
+
+            ClearCache(entityToInsert.EntityName.ToString());
         }
         public async Task ValidateForEntity<TEntity>(Dictionary<string, object> fieldToValidate)
         {
@@ -74,6 +69,9 @@ namespace CMS.Services.ExtendedFields
             }
         }
 
+        #endregion
+
+        #region Utilities
 
         private async Task ValidateFieldAsync(CreateFieldRequest model)
         {
@@ -83,6 +81,21 @@ namespace CMS.Services.ExtendedFields
             if (isExists)
                 throw new BadHttpRequestException("The entered field is already exists");
         }
+        private async Task<List<string>> GetAllEntityFieldsNames<TEntity>()
+        {
+            var typeFields = typeof(TEntity).GetPropertiesList();
+            var entityExtraFields = (await GetForEntityCachedAsync<TEntity>()).Select(x => x.FieldName).ToList();
 
+            return typeFields.Concat(entityExtraFields).ToList();
+        }
+
+        private void ClearCache(string entityName)
+        {
+            var key = string.Format(CacheKeys.FIELDS_BY_ENTITY, entityName);
+
+            _cacheManager.Remove(key);
+        }
+
+        #endregion
     }
 }
