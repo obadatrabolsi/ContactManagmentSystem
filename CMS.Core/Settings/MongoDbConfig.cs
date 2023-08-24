@@ -1,4 +1,4 @@
-﻿namespace YIT.Core.Settings
+﻿namespace CMS.Core.Settings
 {
     public class MongoDbSettings
     {

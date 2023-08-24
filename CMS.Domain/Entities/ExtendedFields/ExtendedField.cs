@@ -1,6 +1,6 @@
-﻿using CMS.Domain.Enums;
+﻿using CMS.Core.Base;
+using CMS.Domain.Enums;
 using MongoDB.Bson.Serialization.Attributes;
-using YIT.Core.Base;
 
 namespace CMS.Domain.Entities.ExtendedFields
 {

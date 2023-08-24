@@ -1,4 +1,6 @@
-﻿namespace Quivyo.Core.Models
+﻿using CMS.Core.Extensions;
+
+namespace CMS.Core.Models
 {
     /// <summary>
     /// Represent an object for response that has pagination

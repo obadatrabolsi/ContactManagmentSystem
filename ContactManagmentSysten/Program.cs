@@ -1,20 +1,59 @@
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Identity.Web;
+using CMS.Api.Helpers;
+using CMS.Api.Middlewares;
+using CMS.Core.Base;
+using CMS.Core.Cache;
+using CMS.Core.Mappers;
+using CMS.Core.Settings;
+using CMS.Data.Helpers;
+using CMS.Data.Repository;
+using CMS.Services.Companies;
+using CMS.Services.Contacts;
+using CMS.Services.ExtendedFields;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
-
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen();
+
+// DI Registration
+builder.Services.AddScoped(typeof(IMongoRepository<>), typeof(MongoRepository<>));
+
+builder.Services.AddScoped<IExtendedFieldService, ExtendedFieldService>();
+builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddScoped<IContactService, ContactService>();
+builder.Services.AddSingleton<DbHelper>();
+
+builder.Services.AddMemoryCache();
+builder.Services.AddInMemoryCache(new CacheSettings()
+{
+    DefaultCacheTime = 1440, // Time in minutes. (1 day)
+    EnableCaching = true,
+});
+
+// Auto Mapper Config
+var config = AutoMapperManager.Configure();
+AutoMapperFactory.AddAutoMapper(config);
+
+// MongoDb Settings
+var mongoDbConfig = new MongoDbSettings();
+builder.Configuration.Bind(nameof(MongoDbSettings), mongoDbConfig);
+builder.Services.AddSingleton(mongoDbConfig);
+
+// Fluent Validation
+var assembles = AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.StartsWith("CMS"));
+
+builder.Services.AddFluentValidationAutoValidation()
+    .AddFluentValidationClientsideAdapters()
+    .AddFluentValidationRulesToSwagger()
+    .AddValidatorsFromAssemblies(assembles);
 
 var app = builder.Build();
 
+app.UseExceptionMiddleware();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -27,5 +66,12 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbHelper = scope.ServiceProvider.GetService<DbHelper>();
+
+    await dbHelper.CreateIndexes();
+}
 
 app.Run();

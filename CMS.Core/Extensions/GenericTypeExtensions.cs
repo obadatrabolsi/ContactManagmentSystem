@@ -11,14 +11,24 @@ namespace CMS.Core.Extensions
             return typeof(T).ToDictionary();
         }
 
-        public static Dictionary<string, object> ToDictionary<T>(this Type type) where T : class
+        public static Dictionary<string, object> ToDictionary(this Type type)
         {
             var classProperties = type
                     .GetProperties()
                     .Where(x => x.GetCustomAttribute<NotMappedAttribute>() == null &&
                                 x.GetCustomAttribute<BsonIgnoreAttribute>() == null);
 
-            return classProperties.ToDictionary(x => x.Name, x => x.GetValue(type));
+            return classProperties.ToDictionary(x => x.Name, x => (object)"");
+        }
+
+        public static List<string> GetPropertiesList(this Type type)
+        {
+            var classProperties = type
+                    .GetProperties()
+                    .Where(x => x.GetCustomAttribute<NotMappedAttribute>() == null &&
+                                x.GetCustomAttribute<BsonIgnoreAttribute>() == null);
+
+            return classProperties.Select(x => x.Name).ToList();
         }
     }
 }

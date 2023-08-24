@@ -1,9 +1,9 @@
-﻿using MongoDB.Bson;
+﻿using CMS.Core.Models;
+using MongoDB.Bson;
 using MongoDB.Driver;
-using Quivyo.Core.Models;
 using System.Linq.Expressions;
 
-namespace YIT.Core.Base
+namespace CMS.Core.Base
 {
     public interface IMongoRepository<TEntity> where TEntity : BaseEntity
     {
@@ -47,28 +47,9 @@ namespace YIT.Core.Base
 
         Task<List<TEntity>> ListInAsync<TField>(Expression<Func<TEntity, TField>> expression, List<TField> array);
 
-        /// <summary>
-        /// Retrieve a list of document paginated from the filtered data
-        /// </summary>
-        /// <param name="filter">Represent the query filter that would filter the result</param>
-        /// <param name="sort">Represent the query sorting options that would sort the result</param>
-        /// <param name="pageIndex">Represent the page index of the paginated result</param>
-        /// <param name="pageSize">Represent the page size of the paginated result</param>
-        /// <returns></returns>
-        Task<PagedResponse<TEntity>> ListPaginatedAsync(FilterDefinition<TEntity> filter = default, SortDefinition<TEntity> sort = default,
-            int pageIndex = 0, int pageSize = 10);
+        Task<PagedResponse<TEntity>> ListPaginatedAsync(PagedRequest options);
 
-        /// <summary>
-        /// Retrieve a list of document paginated from the filtered data
-        /// </summary>
-        /// <param name="selectExpression">Represent projection expression</param>
-        /// <param name="filter">Represent the query filter that would filter the result</param>
-        /// <param name="sort">Represent the query sorting options that would sort the result</param>
-        /// <param name="pageIndex">Represent the page index of the paginated result</param>
-        /// <param name="pageSize">Represent the page size of the paginated result</param>
-        /// <returns></returns>
-        Task<PagedResponse<TResponse>> ListPaginatedAsync<TResponse>(Func<TEntity, TResponse> selectExpression, FilterDefinition<TEntity> filter = default,
-            SortDefinition<TEntity> sort = default, int pageIndex = 0, int pageSize = 10);
+        Task<PagedResponse<TResponse>> ListPaginatedAsync<TResponse>(Func<TEntity, TResponse> selectExpression, PagedRequest options);
 
         Task<bool> AnyAsync();
 

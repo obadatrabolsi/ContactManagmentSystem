@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
-using CMS.Core.Domain.Companies;
-using CMS.Domain.Requests.Fields;
+using CMS.Domain.Entities.Companies;
 
 namespace CMS.Domain.Responses.Companies
 {
@@ -9,7 +8,7 @@ namespace CMS.Domain.Responses.Companies
         public Guid Id { get; set; }
         public string Name { get; set; }
         public int NumberOfEmployees { get; set; }
-        public List<EntityFieldRequest> ExtendedFields { get; set; }
+        public Dictionary<string, object> ExtendedFields { get; set; }
     }
 
     public class CompanyResponseProfile : Profile

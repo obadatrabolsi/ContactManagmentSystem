@@ -1,12 +1,13 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using CMS.Core.Base;
+using CMS.Core.Extensions;
+using CMS.Core.Models;
+using CMS.Core.Settings;
+using Microsoft.AspNetCore.Http;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Quivyo.Core.Models;
 using System.Linq.Expressions;
-using YIT.Core.Base;
-using YIT.Core.Settings;
 
-namespace YIT.Data.Repository
+namespace CMS.Data.Repository
 {
     public class MongoRepository<TEntity> : IMongoRepository<TEntity> where TEntity : BaseEntity
     {
@@ -43,8 +44,6 @@ namespace YIT.Data.Repository
         /// <returns></returns>
         public async Task InsertAsync(TEntity entity)
         {
-            SetAudutableFields(entity, false);
-
             await Collection.InsertOneAsync(entity);
         }
 
@@ -55,8 +54,6 @@ namespace YIT.Data.Repository
         /// <returns></returns>
         public async Task InsertRangeAsync(List<TEntity> entities)
         {
-            entities.ForEach(entity => SetAudutableFields(entity, false));
-
             await Collection.InsertManyAsync(entities);
         }
 
@@ -67,8 +64,6 @@ namespace YIT.Data.Repository
         /// <returns></returns>
         public async Task UpdateAsync(TEntity entity)
         {
-            SetAudutableFields(entity, true);
-
             await Collection.ReplaceOneAsync(t => t.Id == entity.Id, entity);
         }
 
@@ -263,11 +258,14 @@ namespace YIT.Data.Repository
         /// <param name="pageIndex">Represent the page index of the paginated result</param>
         /// <param name="pageSize">Represent the page size of the paginated result</param>
         /// <returns></returns>
-        public async Task<PagedResponse<TEntity>> ListPaginatedAsync(FilterDefinition<TEntity> filter = default, SortDefinition<TEntity> sort = default,
-            int pageIndex = 0, int pageSize = 10)
+        public async Task<PagedResponse<TEntity>> ListPaginatedAsync(PagedRequest options)
         {
-            sort = sort ?? Builders<TEntity>.Sort.Descending(t => t.CreatedOn);
-            filter = filter ?? Builders<TEntity>.Filter.Empty;
+            var filter = PrepareFilter(options);
+            var sort = PrepareSorting(options);
+
+            var pageIndex = options.PageIndex;
+            var pageSize = options.PageSize;
+
 
             if (pageIndex < 0)
                 pageIndex = 0;
@@ -312,9 +310,14 @@ namespace YIT.Data.Repository
         /// <param name="pageIndex">Represent the page index of the paginated result</param>
         /// <param name="pageSize">Represent the page size of the paginated result</param>
         /// <returns></returns>
-        public async Task<PagedResponse<TResponse>> ListPaginatedAsync<TResponse>(Func<TEntity, TResponse> selectExpression, FilterDefinition<TEntity> filter = default,
-            SortDefinition<TEntity> sort = default, int pageIndex = 0, int pageSize = 10)
+        public async Task<PagedResponse<TResponse>> ListPaginatedAsync<TResponse>(Func<TEntity, TResponse> selectExpression, PagedRequest options)
         {
+            var filter = PrepareFilter(options);
+            var sort = PrepareSorting(options);
+
+            var pageIndex = options.PageIndex;
+            var pageSize = options.PageSize;
+
             if (pageIndex < 0)
                 pageIndex = 0;
 
@@ -383,20 +386,6 @@ namespace YIT.Data.Repository
 
         #region Utilities
 
-        private void SetAudutableFields(TEntity entity, bool isUpdate)
-        {
-            if (!isUpdate)
-            {
-                entity.CreatedOn = entity.CreatedOn != new DateTime() ? entity.CreatedOn : DateTime.UtcNow;
-                entity.CreatedBy = entity.CreatedBy ?? _httpContextAccessor.HttpContext?.User?.Identity?.Name ?? "";
-            }
-            else
-            {
-                entity.UpdatedOn = DateTime.UtcNow;
-                entity.UpdatedBy = _httpContextAccessor.HttpContext?.User?.Identity?.Name ?? "";
-            }
-        }
-
         private AggregateFacet<TEntity, AggregateCountResult> GetCountFacet()
         {
             var countFacet = AggregateFacet.Create("count",
@@ -413,6 +402,35 @@ namespace YIT.Data.Repository
             return db.GetCollection<TEntity>(_collectionName);
         }
 
+        private FilterDefinition<TEntity> PrepareFilter(PagedRequest options)
+        {
+            var builder = Builders<TEntity>.Filter;
+            var filter = builder.Empty;
+
+            foreach (var item in options.SearchFields)
+                filter = filter & builder.Eq(item.Key, item.Value);
+
+            return filter;
+        }
+        private SortDefinition<TEntity> PrepareSorting(PagedRequest options)
+        {
+            var builder = Builders<TEntity>.Sort;
+
+            if (options.OrderBy.IsEmpty())
+                return builder.Descending(x => x.Id);
+
+            List<SortDefinition<TEntity>> sort = new List<SortDefinition<TEntity>>();
+
+            foreach (var key in options.OrderBy)
+            {
+                var descending = key.StartsWith('-');
+                var itemKey = descending ? key.Remove(0, 1) : key;
+
+                sort.Add(descending ? builder.Descending(itemKey) : builder.Ascending(itemKey));
+            }
+
+            return builder.Combine(sort);
+        }
         #endregion Utilities
     }
 }

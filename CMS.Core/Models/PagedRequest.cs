@@ -1,19 +1,10 @@
-﻿namespace Quivyo.Core.Models
+﻿namespace CMS.Core.Models
 {
     /// <summary>
     /// Represent an object for request that has pagination
     /// </summary>
     public class PagedRequest
     {
-        /// <summary>
-        /// Return a default instance without pagination
-        /// </summary>
-        public static PagedRequest Default => new PagedRequest()
-        {
-            EnablePagination = false,
-        };
-
-
         /// <summary>
         /// Represent the page index to start pagination from. (0 is the default)
         /// </summary>
@@ -33,29 +24,12 @@
         /// You can send multiples fields (ex: -id,name) 
         /// </summary>
         /// <example>-Id</example>
-        public string OrderBy { get; set; }
+        public string[] OrderBy { get; set; }
 
         /// <summary>
-        /// Represent the name of the field to include in the search. You can add multiple fields with comma separated. (Ex: "FirstName,LastName")
+        /// Represent a list of key value pairs for data filtration, the key represent the field name the value represent the key value
         /// </summary>
-        /// <example></example>
-        public string SearchBy { get; set; }
+        public Dictionary<string, object> SearchFields { get; set; } = new Dictionary<string, object>();
 
-        /// <summary>
-        /// Represent the text that will search with.
-        /// </summary>
-        /// <example></example>
-        public string SearchText { get; set; }
-
-        /// <summary>
-        /// Represent whether return all data without pagination or use pagination
-        /// </summary>
-        /// <example>true</example>
-        public bool EnablePagination { get; set; } = true;
-
-        /// <summary>
-        /// Represent how to draw the grid (Specified for data tables)
-        /// </summary>
-        public string Draw { get; set; }
     }
 }

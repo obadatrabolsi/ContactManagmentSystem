@@ -1,6 +1,6 @@
-﻿using YIT.Core.Base;
+﻿using CMS.Core.Base;
 
-namespace YIT.Services.Base
+namespace CMS.Services.Base
 {
     public class MongoBaseService<TEntity> where TEntity : BaseEntity
     {

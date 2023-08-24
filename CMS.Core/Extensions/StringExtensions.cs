@@ -1,7 +1,7 @@
 ﻿using System.Net.Mail;
 using System.Text.RegularExpressions;
 
-namespace YIT.Core.Extensions
+namespace CMS.Core.Extensions
 {
     public static class StringExtensions
     {

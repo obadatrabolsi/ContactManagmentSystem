@@ -1,23 +1,19 @@
-﻿using AutoMapper;
+﻿using CMS.Core.Base;
 using CMS.Core.Extensions;
+using CMS.Core.Mappers;
 using CMS.Domain.Entities.ExtendedFields;
 using CMS.Domain.Enums;
 using CMS.Domain.Requests.Fields;
 using CMS.Domain.Responses.Fields;
+using CMS.Services.Base;
 using Microsoft.AspNetCore.Http;
-using YIT.Core.Base;
-using YIT.Services.Base;
 
 namespace CMS.Services.ExtendedFields
 {
     public class ExtendedFieldService : MongoBaseService<ExtendedField>, IExtendedFieldService
     {
-        private readonly IMapper _mapper;
-
-        public ExtendedFieldService(IMongoRepository<ExtendedField> repository,
-            IMapper mapper) : base(repository)
+        public ExtendedFieldService(IMongoRepository<ExtendedField> repository) : base(repository)
         {
-            _mapper = mapper;
         }
 
         public async Task<List<FieldResponse>> GetForEntityAsync<TEntity>()
@@ -27,7 +23,7 @@ namespace CMS.Services.ExtendedFields
 
             var entityFields = await _repository.ListAsync(x => x.EntityName == entityNameEnum);
 
-            return entityFields.Select(_mapper.Map<FieldResponse>).ToList();
+            return entityFields.Select(x => x.MapTo<FieldResponse>()).ToList();
         }
         public async Task<List<FieldResponse>> GetForEntityCachedAsync<TEntity>()
         {
@@ -37,57 +33,55 @@ namespace CMS.Services.ExtendedFields
 
             var entityFields = await _repository.ListAsync(x => x.EntityName == entityNameEnum);
 
-            return entityFields.Select(_mapper.Map<FieldResponse>).ToList();
+            return entityFields.Select(x => x.MapTo<FieldResponse>()).ToList();
+        }
+        public async Task<List<string>> GetAllEntityFieldsNames<TEntity>()
+        {
+            var typeFields = typeof(TEntity).GetPropertiesList();
+            var entityExtraFields = (await GetForEntityCachedAsync<TEntity>()).Select(x => x.FieldName).ToList();
+
+            return typeFields.Concat(entityExtraFields).ToList();
+        }
+        public async Task<List<(string FieldName, bool IsExtendedField)>> GetAllEntityFields<TEntity>()
+        {
+            var typeFields = typeof(TEntity).GetPropertiesList().Select(x => (x, false));
+            var entityExtraFields = (await GetForEntityCachedAsync<TEntity>()).Select(x => (x.FieldName, true)).ToList();
+
+            return typeFields.Concat(entityExtraFields).ToList();
         }
 
         public async Task CreateAsync(CreateFieldRequest model)
         {
-            var entityToInsert = _mapper.Map<ExtendedField>(model);
+            var entityToInsert = model.MapTo<ExtendedField>();
 
             await ValidateFieldAsync(model);
 
             await _repository.InsertAsync(entityToInsert);
         }
-
-        public async Task ValidateForEntity<TEntity>(List<EntityFieldRequest> fieldToValidate)
+        public async Task ValidateForEntity<TEntity>(Dictionary<string, object> fieldToValidate)
         {
-            ValidateEntityImplicitFields<TEntity>(fieldToValidate);
+            if (fieldToValidate.IsEmpty())
+                return;
 
-            await ValidateEntityExtraFields<TEntity>(fieldToValidate);
+            var entityFields = await GetAllEntityFieldsNames<TEntity>();
+
+            var unExistsFields = fieldToValidate.Where(ex => !entityFields.Contains(ex.Key));
+
+            if (!unExistsFields.IsEmpty())
+            {
+                var invalidFields = string.Join(",", unExistsFields);
+                throw new BadHttpRequestException(string.Format("The following fields in not valid to the given entity: {0}", invalidFields));
+            }
         }
+
 
         private async Task ValidateFieldAsync(CreateFieldRequest model)
         {
-            var isExists = await _repository.AnyAsync(x => x.FieldName.Trim().ToLower() == model.FieldName.Trim().ToLower() &&
+            var isExists = await _repository.AnyAsync(x => x.FieldName.ToLower() == model.FieldName &&
                                                            x.EntityName == model.EntityName);
 
             if (isExists)
                 throw new BadHttpRequestException("The entered field is already exists");
-        }
-
-        public void ValidateEntityImplicitFields<TEntity>(List<EntityFieldRequest> fieldToValidate)
-        {
-            var typeFields = typeof(TEntity).ToDictionary();
-
-            var unExistsFields = fieldToValidate.Where(ex => !typeFields.Any(f => f.Key == ex.FieldName));
-
-            if (!unExistsFields.IsEmpty())
-            {
-                var invalidFields = string.Join(",", unExistsFields.Select(x => x.FieldName));
-                throw new BadHttpRequestException(string.Join("The following fields in not valid to the given entity: {0}", invalidFields));
-            }
-        }
-        public async Task ValidateEntityExtraFields<TEntity>(List<EntityFieldRequest> fieldToValidate)
-        {
-            var entityExtraFields = await GetForEntityCachedAsync<TEntity>();
-
-            var unExistsFields = fieldToValidate.Where(ex => !entityExtraFields.Exists(f => f.FieldName == ex.FieldName));
-
-            if (!unExistsFields.IsEmpty())
-            {
-                var invalidFields = string.Join(",", unExistsFields.Select(x => x.FieldName));
-                throw new BadHttpRequestException(string.Join("The following fields in not valid to the given entity: {0}", invalidFields));
-            }
         }
 
     }

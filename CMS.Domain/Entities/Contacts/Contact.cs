@@ -1,13 +1,14 @@
-﻿using CMS.Core.Domain.Companies;
+﻿using CMS.Core.Base;
+using CMS.Domain.Entities.Companies;
 using MongoDB.Bson.Serialization.Attributes;
-using YIT.Core.Base;
 
-namespace CMS.Core.Domain.Contacts
+namespace CMS.Domain.Entities.Contacts
 {
     [BsonIgnoreExtraElements]
     public class Contact : BaseEntity
     {
         public string Name { get; set; }
-        public Company Company { get; set; }
+        public List<Company> Companies { get; set; }
+        public Dictionary<string, string> ExtendedFields { get; set; }
     }
 }

@@ -1,14 +1,13 @@
-﻿using CMS.Domain.Entities.ExtendedFields;
+﻿using CMS.Core.Base;
 using MongoDB.Bson.Serialization.Attributes;
-using YIT.Core.Base;
 
-namespace CMS.Core.Domain.Companies
+namespace CMS.Domain.Entities.Companies
 {
     [BsonIgnoreExtraElements]
     public class Company : BaseEntity
     {
         public string Name { get; set; }
         public int NumberOfEmployees { get; set; }
-        public List<ExtendedField> ExtendedFields { get; set; }
+        public Dictionary<string, string> ExtendedFields { get; set; }
     }
 }

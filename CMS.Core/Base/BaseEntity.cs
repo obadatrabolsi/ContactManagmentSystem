@@ -1,9 +1,8 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace YIT.Core.Base
+namespace CMS.Core.Base
 {
-    public partial class BaseEntity<T> : Auditable
+    public partial class BaseEntity<T>
     {
         protected BaseEntity()
         {
@@ -11,9 +10,6 @@ namespace YIT.Core.Base
 
         [Key]
         public T Id { get; set; }
-
-        [ScaffoldColumn(false)]
-        public bool IsDeleted { get; set; }
     }
 
     public partial class BaseEntity : BaseEntity<Guid>
